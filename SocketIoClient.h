@@ -14,6 +14,7 @@
 @interface SocketIoClient : NSObject {
   NSString *_host;
   NSInteger _port;
+  BOOL _isSecure;
   WebSocket *_webSocket;
   
   NSTimeInterval _connectTimeout;
@@ -32,6 +33,8 @@
   NSMutableArray *_queue;
 }
 
+@property (nonatomic, readonly) BOOL isSecure;
+
 @property (nonatomic, retain) NSString *sessionId;
 @property (nonatomic, readonly) BOOL isConnected;
 @property (nonatomic, readonly) BOOL isConnecting;
@@ -44,6 +47,7 @@
 @property (nonatomic, assign) NSTimeInterval heartbeatTimeout;
 
 - (id)initWithHost:(NSString *)host port:(int)port;
+- (id)initWithSecureHost:(NSString *)host port:(int)port;
 
 - (void)connect;
 - (void)disconnect;

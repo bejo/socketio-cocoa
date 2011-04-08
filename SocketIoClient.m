@@ -9,6 +9,9 @@
 #import "SocketIoClient.h"
 #import "WebSocket.h"
 
+#define WEBSOCKET_SCHEME        @"ws"
+#define WEBSOCKET_SECURE_SCHEME @"wss"
+
 @interface SocketIoClient (FP_Private) <WebSocketDelegate>
 - (void)log:(NSString *)message;
 - (NSString *)encode:(NSArray *)messages;
@@ -20,10 +23,10 @@
 
 @synthesize sessionId = _sessionId, delegate = _delegate, connectTimeout = _connectTimeout, 
             tryAgainOnConnectTimeout = _tryAgainOnConnectTimeout, heartbeatTimeout = _heartbeatTimeout,
-            isConnecting = _isConnecting, isConnected = _isConnected;
+            isConnecting = _isConnecting, isConnected = _isConnected, isSecure = _isSecure;
 
 - (id)initWithHost:(NSString *)host port:(int)port {
-  if (self = [super init]) {
+  if ((self = [super init])) {
     _host = [host retain];
     _port = port;
     _queue = [[NSMutableArray array] retain];
@@ -31,6 +34,13 @@
     _connectTimeout = 5.0;
     _tryAgainOnConnectTimeout = YES;
     _heartbeatTimeout = 15.0;
+  }
+  return self;
+}
+
+- (id)initWithSecureHost:(NSString *)host port:(int)port {
+  if ((self = [self initWithHost:host port:port])) {
+    _isSecure = YES;
   }
   return self;
 }
@@ -63,7 +73,13 @@
     
     _isConnecting = YES;
     
-    NSString *URL = [NSString stringWithFormat:@"ws://%@:%d/socket.io/websocket",
+    NSString *webSocketScheme = WEBSOCKET_SCHEME;
+    if (_isSecure) {
+      webSocketScheme = WEBSOCKET_SECURE_SCHEME;
+    }
+    
+    NSString *URL = [NSString stringWithFormat:@"%@://%@:%d/socket.io/websocket",
+                     webSocketScheme,
                      _host,
                      _port];
     
@@ -299,8 +315,12 @@
   [self onData:message];
 }
 
+- (void)webSocketDidSecure:(WebSocket*)ws {
+  [self log:[NSString stringWithFormat:@"Websocket connection secured."]];
+}
+
 - (void)log:(NSString *)message {
-  // NSLog(@"%@", message);
+  NSLog(@"%@", message);
 }
 
 @end
