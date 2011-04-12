@@ -61,11 +61,6 @@
     if (_tryAgainOnConnectTimeout) {
       [self connect];
     }
-    
-    // Continually check to see if we can reestablish our connection
-    if (_connectTimeout > 0.0 && _tryAgainOnConnectTimeout) {
-      [self performSelector:@selector(checkIfConnected) withObject:nil afterDelay:_connectTimeout];
-    }
   }
 }
 
