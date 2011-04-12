@@ -61,6 +61,11 @@
     if (_tryAgainOnConnectTimeout) {
       [self connect];
     }
+    
+    // Continually check to see if we can reestablish our connection
+    if (_connectTimeout > 0.0 && _tryAgainOnConnectTimeout) {
+      [self performSelector:@selector(checkIfConnected) withObject:nil afterDelay:_connectTimeout];
+    }
   }
 }
 
@@ -115,7 +120,7 @@
                            nil];
   
   if (!_isConnected) {
-    [_queue addObject:message];
+    [self queueOfflineMessage:message];
   } else {
     NSArray *messages = [NSArray arrayWithObject:message];
 
@@ -123,6 +128,10 @@
     
     [self notifyMessagesSent:messages];
   }
+}
+
+- (void)queueOfflineMessage:(NSDictionary *)message {
+  [_queue addObject:message];
 }
 
 #pragma mark SocketIO Related Protocol
@@ -208,6 +217,9 @@
 - (void)onTimeout {
   [self log:@"Timed out waiting for heartbeat."];
   [self onDisconnect];
+  
+  // attempt to reconnect
+  [self checkIfConnected];
 }
 
 - (void)setTimeout {  

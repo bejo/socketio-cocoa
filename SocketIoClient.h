@@ -59,6 +59,15 @@
  */
 - (void)send:(NSString *)data isJSON:(BOOL)isJSON;
 
+/**
+ * Adds the NSDictionary representation of a message to the offline queue. 
+ * This allows subclass implementations to have more granular control over what
+ * is happening to their writes that happen without a connection instead of 
+ * only keeping an in memory copy that gets erased on connection. This also allows
+ * messages to be queued directly into an offline data structure.
+ */
+- (void)queueOfflineMessage:(NSDictionary *)message;
+
 @end
 
 @protocol SocketIoClientDelegate <NSObject>
