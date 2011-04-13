@@ -19,6 +19,7 @@
   
   NSTimeInterval _connectTimeout;
   BOOL _tryAgainOnConnectTimeout;
+  BOOL _tryAgainOnHeartbeatTimeout;
   
   NSTimeInterval _heartbeatTimeout;
   
@@ -43,6 +44,7 @@
 
 @property (nonatomic, assign) NSTimeInterval connectTimeout;
 @property (nonatomic, assign) BOOL tryAgainOnConnectTimeout;
+@property (nonatomic, assign) BOOL tryAgainOnHeartbeatTimeout;
 
 @property (nonatomic, assign) NSTimeInterval heartbeatTimeout;
 

@@ -23,7 +23,8 @@
 
 @synthesize sessionId = _sessionId, delegate = _delegate, connectTimeout = _connectTimeout, 
             tryAgainOnConnectTimeout = _tryAgainOnConnectTimeout, heartbeatTimeout = _heartbeatTimeout,
-            isConnecting = _isConnecting, isConnected = _isConnected, isSecure = _isSecure;
+            isConnecting = _isConnecting, isConnected = _isConnected, isSecure = _isSecure, 
+            tryAgainOnHeartbeatTimeout = _tryAgainOnHeartbeatTimeout;
 
 - (id)initWithHost:(NSString *)host port:(int)port {
   if ((self = [super init])) {
@@ -33,6 +34,7 @@
     
     _connectTimeout = 5.0;
     _tryAgainOnConnectTimeout = YES;
+    _tryAgainOnHeartbeatTimeout = YES;
     _heartbeatTimeout = 15.0;
   }
   return self;
@@ -101,6 +103,11 @@
 - (void)disconnect {
   [self log:@"Disconnect"];
   [_webSocket close];
+  
+  // invalidate any timers that were previously set to attempt to reconnect
+  [_timeout invalidate];
+  [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(checkIfConnected) object:nil];
+  
   [self onDisconnect];
 }
 
@@ -213,8 +220,7 @@
   [self log:@"Timed out waiting for heartbeat."];
   [self onDisconnect];
   
-  // attempt to reconnect
-  [self checkIfConnected];
+  if (_tryAgainOnHeartbeatTimeout) [self checkIfConnected];
 }
 
 - (void)setTimeout {  
@@ -327,7 +333,7 @@
 }
 
 - (void)log:(NSString *)message {
-  NSLog(@"%@", message);
+  //NSLog(@"%@", message);
 }
 
 @end
