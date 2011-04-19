@@ -178,7 +178,7 @@
   NSMutableArray *messages = [NSMutableArray array];
   
   int i = 0;
-  int len = [data length];
+  int len = (int)[data length];
   while (i < len) {
     if ([[data substringWithRange:NSMakeRange(i, 3)] isEqualToString:@"~m~"]) {
       
