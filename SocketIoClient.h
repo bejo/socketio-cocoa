@@ -13,6 +13,7 @@
 
 @interface SocketIoClient : NSObject {
   NSString *_host;
+  NSString *_resourcePath;
   NSInteger _port;
   BOOL _isSecure;
   WebSocket *_webSocket;
@@ -48,8 +49,8 @@
 
 @property (nonatomic, assign) NSTimeInterval heartbeatTimeout;
 
-- (id)initWithHost:(NSString *)host port:(int)port;
-- (id)initWithSecureHost:(NSString *)host port:(int)port;
+- (id)initWithHost:(NSString *)host resource:(NSString *)resourcePath port:(int)port;
+- (id)initWithSecureHost:(NSString *)host resource:(NSString *)resourcePath port:(int)port;
 
 - (void)connect;
 - (void)disconnect;
@@ -86,5 +87,6 @@
 @optional
 
 - (void)socketIoClient:(SocketIoClient *)client didSendMessage:(NSString *)message isJSON:(BOOL)isJSON;
+- (void)socketIoClient:(SocketIoClient *)client didFailWithError:(NSError *)error;
 
 @end

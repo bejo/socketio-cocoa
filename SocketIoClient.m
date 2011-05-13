@@ -26,9 +26,14 @@
             isConnecting = _isConnecting, isConnected = _isConnected, isSecure = _isSecure, 
             tryAgainOnHeartbeatTimeout = _tryAgainOnHeartbeatTimeout;
 
-- (id)initWithHost:(NSString *)host port:(int)port {
+- (id)initWithHost:(NSString *)host resource:(NSString *)resourcePath port:(int)port {
   if ((self = [super init])) {
     _host = [host retain];
+    if (resourcePath == nil) {
+      _resourcePath = @"socket.io/websocket";
+    } else {
+      _resourcePath = [resourcePath retain];
+    }
     _port = port;
     _queue = [[NSMutableArray array] retain];
     
@@ -40,8 +45,8 @@
   return self;
 }
 
-- (id)initWithSecureHost:(NSString *)host port:(int)port {
-  if ((self = [self initWithHost:host port:port])) {
+- (id)initWithSecureHost:(NSString *)host resource:(NSString *)resourcePath port:(int)port {
+  if ((self = [self initWithHost:host resource:resourcePath port:port])) {
     _isSecure = YES;
   }
   return self;
@@ -49,6 +54,7 @@
 
 - (void)dealloc {
   [_host release];
+  [_resourcePath release];
   [_queue release];
   [_webSocket release];
   self.sessionId = nil;
@@ -80,10 +86,11 @@
       webSocketScheme = WEBSOCKET_SECURE_SCHEME;
     }
     
-    NSString *URL = [NSString stringWithFormat:@"%@://%@:%d/socket.io/websocket",
+    NSString *URL = [NSString stringWithFormat:@"%@://%@:%d/%@",
                      webSocketScheme,
                      _host,
-                     _port];
+                     _port,
+                     _resourcePath];
     
     [self log:[NSString stringWithFormat:@"Opening %@", URL]];
     
@@ -312,6 +319,9 @@
 
 - (void)webSocket:(WebSocket *)ws didFailWithError:(NSError *)error {
   [self log:[NSString stringWithFormat:@"Connection failed with error: %@", [error localizedDescription]]];
+  if ([_delegate respondsToSelector:@selector(socketIoClient:didFailWithError:)]) {
+    [_delegate socketIoClient:self didFailWithError:error];
+  }
 }
 
 - (void)webSocketDidClose:(WebSocket*)webSocket {
@@ -321,6 +331,7 @@
 
 - (void)webSocketDidOpen:(WebSocket *)ws {
   [self log:[NSString stringWithFormat:@"Connection opened."]];
+  [self onConnect];
 }
 
 - (void)webSocket:(WebSocket *)ws didReceiveMessage:(NSString*)message {  
@@ -330,6 +341,7 @@
 
 - (void)webSocketDidSecure:(WebSocket*)ws {
   [self log:[NSString stringWithFormat:@"Websocket connection secured."]];
+  [self onConnect];
 }
 
 - (void)log:(NSString *)message {
