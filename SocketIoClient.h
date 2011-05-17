@@ -31,6 +31,12 @@
   NSString *_sessionId;
   
   id<SocketIoClientDelegate> _delegate;
+  // Selectors
+  SEL _didStartSelector;
+  SEL _didDisconnectSelector;
+  SEL _didReceiveMessageSelector;
+  SEL _didSendMessageSelector;
+  SEL _didFailSelector;
   
   NSMutableArray *_queue;
 }
@@ -48,6 +54,13 @@
 @property (nonatomic, assign) BOOL tryAgainOnHeartbeatTimeout;
 
 @property (nonatomic, assign) NSTimeInterval heartbeatTimeout;
+
+// Selectors
+@property (assign) SEL didConnectSelector;
+@property (assign) SEL didDisconnectSelector;
+@property (assign) SEL didReceiveMessageSelector;
+@property (assign) SEL didSendMessageSelector;
+@property (assign) SEL didFailSelector;
 
 - (id)initWithHost:(NSString *)host resource:(NSString *)resourcePath port:(int)port;
 - (id)initWithSecureHost:(NSString *)host resource:(NSString *)resourcePath port:(int)port;

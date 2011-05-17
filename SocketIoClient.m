@@ -17,6 +17,7 @@
 - (NSString *)encode:(NSArray *)messages;
 - (void)onDisconnect;
 - (void)notifyMessagesSent:(NSArray *)messages;
+- (void)callDelegateWithSelector:(SEL)selector andObjects:(id)firstObject, ...;
 @end
 
 @implementation SocketIoClient
@@ -25,6 +26,10 @@
             tryAgainOnConnectTimeout = _tryAgainOnConnectTimeout, heartbeatTimeout = _heartbeatTimeout,
             isConnecting = _isConnecting, isConnected = _isConnected, isSecure = _isSecure, 
             tryAgainOnHeartbeatTimeout = _tryAgainOnHeartbeatTimeout;
+// Selectors
+@synthesize didConnectSelector = _didConnectSelector, didDisconnectSelector = _didDisconnectSelector,
+            didReceiveMessageSelector = _didReceiveMessageSelector, didSendMessageSelector = _didSendMessageSelector,
+            didFailSelector = _didFailSelector;
 
 - (id)initWithHost:(NSString *)host resource:(NSString *)resourcePath port:(int)port {
   if ((self = [super init])) {
@@ -41,6 +46,13 @@
     _tryAgainOnConnectTimeout = YES;
     _tryAgainOnHeartbeatTimeout = YES;
     _heartbeatTimeout = 15.0;
+    
+    // Selectors
+    self.didConnectSelector = @selector(socketIoClientDidConnect:);
+    self.didDisconnectSelector = @selector(socketIoClientDidDisconnect:);
+    self.didReceiveMessageSelector = @selector(socketIoClient:didReceiveMessage:isJSON:);
+    self.didSendMessageSelector = @selector(socketIoClient:didSendMessage:isJSON:);
+    self.didFailSelector = @selector(socketIoClient:didFailWithError:);
   }
   return self;
 }
@@ -146,13 +158,11 @@
 #pragma mark SocketIO Related Protocol
 
 - (void)notifyMessagesSent:(NSArray *)messages {
-  if ([_delegate respondsToSelector:@selector(socketIoClient:didSendMessage:isJSON:)]) {
-    for (NSDictionary *message in messages) {
-      NSString *data = [message objectForKey:@"data"];
-      NSString *type = [message objectForKey:@"type"];
-
-      [_delegate socketIoClient:self didSendMessage:data isJSON:[type isEqualToString:@"json"]];
-    }
+  for (NSDictionary *message in messages) {
+    NSString *data = [message objectForKey:@"data"];
+    NSString *type = [message objectForKey:@"type"];
+    
+    [self callDelegateWithSelector:self.didSendMessageSelector andObjects:self, data, [NSNumber numberWithBool:[type isEqualToString:@"json"]], nil];
   }
 }
 
@@ -265,9 +275,7 @@
   
   [self doQueue];
   
-  if (_delegate != nil) {
-    [_delegate socketIoClientDidConnect:self];
-  }
+  [self callDelegateWithSelector:self.didConnectSelector andObjects:self, nil];
   
   [self setTimeout];
 }
@@ -281,8 +289,8 @@
   
   [_queue removeAllObjects];
   
-  if (wasConnected && _delegate != nil) {
-    [_delegate socketIoClientDidDisconnect:self];
+  if (wasConnected) {
+    [self callDelegateWithSelector:self.didDisconnectSelector andObjects:self, nil];
   }
 }
 
@@ -295,13 +303,9 @@
   } else if ([[message substringWithRange:NSMakeRange(0, 3)] isEqualToString:@"~h~"]) {
     [self onHeartbeat:[message substringFromIndex:3]];
   } else if ([[message substringWithRange:NSMakeRange(0, 3)] isEqualToString:@"~j~"]) {
-    if (_delegate != nil) {
-      [_delegate socketIoClient:self didReceiveMessage:[message substringFromIndex:3] isJSON:YES];
-    }
+    [self callDelegateWithSelector:self.didReceiveMessageSelector andObjects:self, [message substringFromIndex:3], [NSNumber numberWithBool:YES], nil];
   } else {
-    if (_delegate != nil) {
-      [_delegate socketIoClient:self didReceiveMessage:message isJSON:NO];
-    }
+    [self callDelegateWithSelector:self.didReceiveMessageSelector andObjects:self, message, [NSNumber numberWithBool:NO], nil];
   }
 }
 
@@ -315,13 +319,40 @@
   }
 }
 
+- (void)callDelegateWithSelector:(SEL)selector andObjects:(id)firstObject, ... {
+    if ([self.delegate respondsToSelector:selector]) {
+        // get method signature and create an invocation
+		NSMethodSignature *signature = [(NSObject *)self.delegate methodSignatureForSelector:selector];
+        NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+        [invocation setSelector:selector];
+        [invocation setTarget:self.delegate];
+        
+        // add arguments
+        va_list args;
+        va_start(args, firstObject);
+        id arg = firstObject;
+        int i = 2;
+        while(arg) {
+            if (strcmp([signature getArgumentTypeAtIndex:i], "c") == 0) {
+                int argc = [arg intValue];
+                [invocation setArgument:&argc atIndex:i++];
+            } else {
+                [invocation setArgument:&arg atIndex:i++];
+            }
+            arg = va_arg(args, id); // get next argument from list
+        } 
+        va_end(args);
+        
+        // send a message to delegate
+        [invocation invokeWithTarget:self.delegate];
+    }
+}
+
 #pragma mark WebSocket Delegate Methods
 
 - (void)webSocket:(WebSocket *)ws didFailWithError:(NSError *)error {
   [self log:[NSString stringWithFormat:@"Connection failed with error: %@", [error localizedDescription]]];
-  if ([_delegate respondsToSelector:@selector(socketIoClient:didFailWithError:)]) {
-    [_delegate socketIoClient:self didFailWithError:error];
-  }
+  [self callDelegateWithSelector:self.didFailSelector andObjects:self, error, nil];
 }
 
 - (void)webSocketDidClose:(WebSocket*)webSocket {
